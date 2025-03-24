@@ -3,8 +3,8 @@ import numpy as np
 
 from news.fetch_news import EXAMPLE_NEWS
 
-template = jinja2.Template("""
-Hi {{ config['user_name'] }}!
+news_template = jinja2.Template("""
+Hi {{ username }}!
 
 Your news feed for today is:
 
@@ -21,20 +21,30 @@ Your news feed for today is:
 {%- endfor %}
 """)
 
+no_news_template = jinja2.Template("""
+Hi {{ username }}!
 
-def build_message(config, news_items, topic_options, identified_topics):
-    return template.render(
-        config=config,
-        news_items=news_items,
-        len_news_items=len(news_items),
-        topic_options=topic_options,
-        len_topic_options=len(topic_options),
-        identified_topics=np.array(identified_topics))
+No news found since you were last updated.
+""")
+
+
+def build_message(config, username, news_items, topic_options, identified_topics):
+    if np.sum(identified_topics) == 0:
+        return no_news_template.render(username=username)
+    else:
+        return news_template.render(
+            username=username,
+            news_items=news_items,
+            len_news_items=len(news_items),
+            topic_options=topic_options,
+            len_topic_options=len(topic_options),
+            identified_topics=np.array(identified_topics))
 
 
 def test():
     print(
-        build_message({'user_name': 'Yishai'},
+        build_message(None,
+                      'Yishai',
                       [EXAMPLE_NEWS],
                       ['Psychology'],
                       [[1]])

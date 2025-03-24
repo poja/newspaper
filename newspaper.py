@@ -70,7 +70,7 @@ def check_the_news(config):
         topic_options = user['topics']
         topic_checker = build_topic_checker(config)
         identified_topics = topic_checker.check(all_news, topic_options)
-        message = build_message(config, all_news, topic_options, identified_topics)
+        message = build_message(config, user['name'], all_news, topic_options, identified_topics)
         send_notification(config, user, 'Newspaper: Daily news feed', message)
 
 
