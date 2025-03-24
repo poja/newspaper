@@ -7,31 +7,33 @@ from llm.openrouter import blank_conversation_request
 
 class TopicChecker:
 
-    @abc.abstractmethod
     def check(self, items, topics):
+        cache = {}  # between (item title, topic) and True/False
+        identified_topics = []
+        for item in items:
+            identified = []
+            for topic in topics:
+                key = (item.title, topic)
+                if key not in cache:
+                    cache[key] = self.check_single(item, topic)
+                identified.append(cache[key])
+            identified_topics.append(identified)
+        return identified_topics
+
+    @abc.abstractmethod
+    def check_single(self, item, topic):
         return NotImplementedError()
 
 
 class RandomChecker(TopicChecker):
 
-    def check(self, items, topics):
-        return [
-            [random.randint(0, 1) for topic in topics]
-            for item in items
-        ]
+    def check_single(self, item, topic):
+        return random.randint(0, 1)
 
 
 class LLMChecker(TopicChecker):
 
-    def check(self, items, topics):
-        print(items)
-        print(topics)
-        return [
-            [self._check_single(item, topic) for topic in topics]
-            for item in items
-        ]
-
-    def _check_single(self, item, topic):
+    def check_single(self, item, topic):
         query = (f"I will give you the title of a scientific article, then its "
                  f"abstract, then a scientific topic. You need to decide if the "
                  f"paper is about the given topic or not. Your response must be "
