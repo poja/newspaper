@@ -6,6 +6,8 @@ DEFAULT_MODEL = "deepseek/deepseek-r1:free"
 def blank_conversation_request(request_content):
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
+
+        # TODO no hard coded data directory
         api_key=open("data/openrouter_api_key.txt", 'r').read(),
     )
 

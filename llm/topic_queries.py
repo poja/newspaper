@@ -45,7 +45,7 @@ class LLMChecker(TopicChecker):
         response = ''
         while response == '':
             response = blank_conversation_request(query).strip()
-            logging.debug('Response is', repr(response))
+            logging.debug('Response is %s', repr(response))
         assert response in ['True', 'False']
         return response == 'True'
 

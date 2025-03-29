@@ -4,6 +4,7 @@ from argparse import ArgumentParser
 from pathlib import Path
 
 import yaml
+import markdown
 
 from llm.topic_queries import build_topic_checker
 from news.fetch_news import build_news_source
@@ -24,10 +25,14 @@ FETCH_INTERVAL = 24 * 60 * 60  # 24h
 def main():
     parser = ArgumentParser()
     parser.add_argument('--base-path', '-p', default='.')
-    parser.add_argument('--setup_cron', '-c', default=False)
-    parser.add_argument('--daemon', '-d', default=False)
+    parser.add_argument('--setup_cron', '-c', action='store_true')
+    parser.add_argument('--daemon', '-d', action='store_true')
+    parser.add_argument('--verbose', '-v', action='store_true')
 
     args = parser.parse_args()
+
+    if args.verbose:
+        logging.getLogger().setLevel(logging.DEBUG)
 
     base_path = Path(args.base_path)
     try:
@@ -71,7 +76,8 @@ def check_the_news(config):
         topic_checker = build_topic_checker(config)
         identified_topics = topic_checker.check(all_news, topic_options)
         message = build_message(config, user['name'], all_news, topic_options, identified_topics)
-        send_notification(config, user, 'Newspaper: Daily news feed', message)
+        html = markdown.markdown(message)
+        send_notification(config, user, 'Newspaper: Daily news feed', html)
 
 
 def setup_cron(config):
