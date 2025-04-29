@@ -1,6 +1,7 @@
 import logging
 import time
 from argparse import ArgumentParser
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -11,6 +12,7 @@ from news.fetch_news import build_news_source
 from notifications.message_content import build_message
 from notifications.email import send_notification
 from py_tools.file_lock import FileLock, LockUnavailable
+from py_tools.stupid_database import StupidDatabase
 
 # Config based on YML
 CONFIG_FILE_NAME = 'config.yml'
@@ -19,7 +21,7 @@ CONFIG_FILE_NAME = 'config.yml'
 #  but could be any DB in the future
 DATABASE_FILE_NAME = 'database.yml'
 
-FETCH_INTERVAL = 24 * 60 * 60  # 24h
+LOOP_INTERVAL = 10 * 60  # 10 minutes
 
 
 def main():
@@ -61,12 +63,15 @@ def update_loop(config):
     while True:
         check_the_news(config)
 
-        # TODO change to a fixed fetch time
-        time.sleep(FETCH_INTERVAL)
+        time.sleep(LOOP_INTERVAL)
 
 
 def check_the_news(config):
     for user in config['users']:
+        fetch_hour = int(user.get('news_feed_hour', '2'))
+        last_update = last_updated(config, user['name'])
+        if not does_require_update(last_update, fetch_hour):
+            continue
         all_news = []
         for news_source_config in user['sources']:
             news_source = build_news_source(config, news_source_config)
@@ -78,6 +83,7 @@ def check_the_news(config):
         message = build_message(config, user['name'], all_news, topic_options, identified_topics)
         html = markdown.markdown(message)
         send_notification(config, user, 'Newspaper: Daily news feed', html)
+        update_last_updated(config, user['name'])
 
 
 def setup_cron(config):
@@ -87,6 +93,38 @@ def setup_cron(config):
 
 def start_daemon(config):
     pass  # TODO
+
+
+def last_updated(config, username):
+    db = StupidDatabase(config['base_path'] / 'database.yml')
+    data = db.read()
+    user_data = data.get('users', {}).get(username, {})
+    last_update = user_data.get('last_updated', '1990-01-01')
+    if isinstance(last_update, str):
+        last_update = datetime.fromisoformat(last_update)
+    return last_update
+
+
+def update_last_updated(config, username):
+    db = StupidDatabase(config['base_path'] / 'database.yml')
+    data = db.read()
+    if 'users' not in data:
+        data['users'] = {}
+    if username not in data['users']:
+        data['users'][username] = {}
+    data['users'][username]['last_updated'] = datetime.now().strftime('%Y-%m-%d')
+    db.write(data)
+
+
+def does_require_update(last_update, news_feed_hour):
+    current_time = datetime.now()
+    if last_update.date() == current_time.date():
+        if current_time.hour < news_feed_hour:
+            return False
+    elif last_update.date() == (current_time.date() - timedelta(days=1)):
+        if last_update.hour >= news_feed_hour and current_time.hour < news_feed_hour:
+            return False
+    return True
 
 
 if __name__ == '__main__':

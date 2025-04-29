@@ -134,7 +134,7 @@ def build_news_source(config, news_source_config):
     if news_source_config == 'nature neuroscience':
         rss_path = 'https://www.nature.com/neuro.rss'
         return NatureGroupRSS(rss_path)
-    elif news_source_config == 'biorxiv':
+    elif news_source_config == 'biorxiv:neuroscience':
         rss_path = 'https://connect.biorxiv.org/biorxiv_xml.php?subject=neuroscience'
         return BioRxivRSS(rss_path)
     else:
@@ -142,7 +142,7 @@ def build_news_source(config, news_source_config):
 
 
 def test():
-    news_source = build_news_source(None, 'bioRxiv')
+    news_source = build_news_source(None, 'bioRxiv:Neuroscience')
     news_items = news_source.fetch()
     for item in news_items:
         print(item)
