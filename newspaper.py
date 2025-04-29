@@ -71,6 +71,7 @@ def check_the_news(config):
         fetch_hour = int(user.get('news_feed_hour', '2'))
         last_update = last_updated(config, user['name'])
         if not does_require_update(last_update, fetch_hour):
+            logging.debug(f'User {user["name"]} does not require update')
             continue
         all_news = []
         for news_source_config in user['sources']:
@@ -82,7 +83,8 @@ def check_the_news(config):
         identified_topics = topic_checker.check(all_news, topic_options)
         message = build_message(config, user['name'], all_news, topic_options, identified_topics)
         html = markdown.markdown(message)
-        send_notification(config, user, 'Newspaper: Daily news feed', html)
+        notification_title = f"Newspaper: Daily news feed ({datetime.now().strftime('%Y-%m-%d')})"
+        send_notification(config, user, notification_title, html)
         update_last_updated(config, user['name'])
 
 

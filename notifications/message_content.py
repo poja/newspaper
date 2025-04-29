@@ -10,13 +10,14 @@ Your news feed for today is:
 
 {% for i in range(len_news_items) -%}
 {% if identified_topics[i].sum() > 0 -%}
-### {{ news_items[i]['title'] }}
+{{ news_items[i]['title'] }}
 **Authors**: {{ ', '.join(news_items[i]['authors']) }}
 **Journal**: {{ news_items[i]['source'] }}
 **Publish date**: {{ news_items[i]['publish_date'] }}
 **Topics**: {% for topic_i in range(len_topic_options) %} {% if identified_topics[i][topic_i] %}{{ topic_options[topic_i] }} {% endif %}{% endfor %}
 **Link**: {%if news_items[i]['doi'] %}http://doi.org/{{ news_items[i]['doi'] }}{%else%}Not found{%endif%}
-{{'\n'}}
+- - -
+{{''}}
 {%- endif %}
 {%- endfor %}
 """)

@@ -110,7 +110,7 @@ class BioRxivRSS(NewsSource):
         self.url = url
 
     def fetch(self):
-        response = requests.get(self.url, headers=headers)
+        response = requests.get(self.url)
         response.raise_for_status()
         feed = feedparser.parse(response.content)
         news_items = []
@@ -118,7 +118,7 @@ class BioRxivRSS(NewsSource):
         for entry in feed.entries:
             news_item = NewsItem(
                 title=entry.title,
-                authors=entry.get('authors', []),
+                authors=[a['name'] for a in entry.get('authors', [])],
                 source=feed.feed.title,
                 publish_date=datetime.fromisoformat(entry.updated),
                 doi=entry.get('dc_identifier', ''),
