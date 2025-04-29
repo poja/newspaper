@@ -104,17 +104,45 @@ class DummyNews(NewsSource):
         return [EXAMPLE_NEWS]
 
 
+class BioRxivRSS(NewsSource):
+
+    def __init__(self, url):
+        self.url = url
+
+    def fetch(self):
+        response = requests.get(self.url, headers=headers)
+        response.raise_for_status()
+        feed = feedparser.parse(response.content)
+        news_items = []
+
+        for entry in feed.entries:
+            news_item = NewsItem(
+                title=entry.title,
+                authors=entry.get('authors', []),
+                source=feed.feed.title,
+                publish_date=datetime.fromisoformat(entry.updated),
+                doi=entry.get('dc_identifier', ''),
+                summary=entry.get('summary', '')
+            )
+            news_items.append(news_item)
+
+        return news_items
+
+
 def build_news_source(config, news_source_config):
-    if news_source_config == 'Nature Neuroscience':
-        rss_path = 'http://www.nature.com/neuro/journal/vaop/ncurrent/rss.rdf'
+    news_source_config = news_source_config.lower()
+    if news_source_config == 'nature neuroscience':
         rss_path = 'https://www.nature.com/neuro.rss'
         return NatureGroupRSS(rss_path)
+    elif news_source_config == 'biorxiv':
+        rss_path = 'https://connect.biorxiv.org/biorxiv_xml.php?subject=neuroscience'
+        return BioRxivRSS(rss_path)
     else:
         return DummyNews()
 
 
 def test():
-    news_source = build_news_source(None, 'Nature Neuroscience')
+    news_source = build_news_source(None, 'bioRxiv')
     news_items = news_source.fetch()
     for item in news_items:
         print(item)
