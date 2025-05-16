@@ -53,4 +53,5 @@ class LLMChecker(TopicChecker):
 
 
 def build_topic_checker(config):
+    # return RandomChecker()
     return LLMChecker()

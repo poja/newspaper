@@ -70,9 +70,12 @@ def check_the_news(config):
     for user in config['users']:
         fetch_hour = int(user.get('news_feed_hour', '2'))
         last_update = last_updated(config, user['name'])
+
         if not does_require_update(last_update, fetch_hour):
             logging.debug(f'User {user["name"]} does not require update')
             continue
+
+        logging.debug(f'Collecting news for user {user["name"]}')
         all_news = []
         for news_source_config in user['sources']:
             news_source = build_news_source(config, news_source_config)
@@ -114,7 +117,8 @@ def update_last_updated(config, username):
         data['users'] = {}
     if username not in data['users']:
         data['users'][username] = {}
-    data['users'][username]['last_updated'] = datetime.now().strftime('%Y-%m-%d')
+
+    data['users'][username]['last_updated'] = datetime.now()
     db.write(data)
 
 
@@ -130,6 +134,6 @@ def does_require_update(last_update, news_feed_hour):
 
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO,
+    logging.basicConfig(level=logging.DEBUG,
                         format="%(asctime)s %(levelname)s :: %(name)s :: %(message)s")
     main()
