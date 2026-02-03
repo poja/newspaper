@@ -16,6 +16,7 @@ class TopicChecker:
                 key = (item.title, topic)
                 if key not in cache:
                     cache[key] = self.check_single(item, topic)
+                    logging.debug("Relevance of %s: %s", item, cache[key])
                 identified.append(cache[key])
             identified_topics.append(identified)
         return identified_topics

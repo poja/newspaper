@@ -4,32 +4,33 @@ from argparse import ArgumentParser
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import yaml
 import markdown
+import yaml
 
 from llm.topic_queries import build_topic_checker
 from news.fetch_news import build_news_source
-from notifications.message_content import build_message
 from notifications.email import send_notification
+from notifications.message_content import build_message
 from py_tools.file_lock import FileLock, LockUnavailable
 from py_tools.stupid_database import StupidDatabase
 
 # Config based on YML
-CONFIG_FILE_NAME = 'config.yml'
+CONFIG_FILE_NAME = "config.yml"
 
 # Database currently implemented using stupid_database
 #  but could be any DB in the future
-DATABASE_FILE_NAME = 'database.yml'
+DATABASE_FILE_NAME = "database.yml"
 
 LOOP_INTERVAL = 10 * 60  # 10 minutes
 
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--base-path', '-p', default='.')
-    parser.add_argument('--setup_cron', '-c', action='store_true')
-    parser.add_argument('--daemon', '-d', action='store_true')
-    parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument("--base-path", "-p", default=".")
+    parser.add_argument("--setup_cron", "-c", action="store_true")
+    parser.add_argument("--daemon", "-d", action="store_true")
+    parser.add_argument("--once", action="store_true")
+    parser.add_argument("--verbose", "-v", action="store_true")
 
     args = parser.parse_args()
 
@@ -38,20 +39,21 @@ def main():
 
     base_path = Path(args.base_path)
     try:
-        with FileLock(base_path / '.lock'):
-
-            with open(base_path / CONFIG_FILE_NAME, 'r') as f:
+        with FileLock(base_path / ".lock"):
+            with open(base_path / CONFIG_FILE_NAME, "r") as f:
                 config = yaml.safe_load(f)
                 if config is None:
                     config = {}
 
-            assert 'base_path' not in config
-            config['base_path'] = base_path
+            assert "base_path" not in config
+            config["base_path"] = base_path
 
             if args.setup_cron:
                 setup_cron(config)
             elif args.daemon:
                 start_daemon(config)
+            elif args.once:
+                check_the_news(config)
             else:
                 update_loop(config)
 
@@ -67,33 +69,37 @@ def update_loop(config):
 
 
 def check_the_news(config):
-    for user in config['users']:
-        fetch_hour = int(user.get('news_feed_hour', '2'))
-        last_update = last_updated(config, user['name'])
+    for user in config["users"]:
+        fetch_hour = int(user.get("news_feed_hour", "2"))
+        last_update = last_updated(config, user["name"])
 
         if not does_require_update(last_update, fetch_hour):
-            logging.debug(f'User {user["name"]} does not require update')
+            logging.debug(f"User {user['name']} does not require update")
             continue
 
-        logging.debug(f'Collecting news for user {user["name"]}')
+        logging.debug(f"Collecting news for user {user['name']}")
         all_news = []
-        for news_source_config in user['sources']:
+        for news_source_config in user["sources"]:
             news_source = build_news_source(config, news_source_config)
             news_items = news_source.fetch()
             all_news.extend(news_items)
-        topic_options = user['topics']
+        topic_options = user["topics"]
         topic_checker = build_topic_checker(config)
         identified_topics = topic_checker.check(all_news, topic_options)
-        message = build_message(config, user['name'], all_news, topic_options, identified_topics)
+        message = build_message(
+            config, user["name"], all_news, topic_options, identified_topics
+        )
         html = markdown.markdown(message)
-        notification_title = f"Newspaper: Daily news feed ({datetime.now().strftime('%Y-%m-%d')})"
+        notification_title = (
+            f"Newspaper: Daily news feed ({datetime.now().strftime('%Y-%m-%d')})"
+        )
         send_notification(config, user, notification_title, html)
-        update_last_updated(config, user['name'])
+        update_last_updated(config, user["name"])
 
 
 def setup_cron(config):
     # TODO
-    logging.info('Cron job set up.')
+    logging.info("Cron job set up.")
 
 
 def start_daemon(config):
@@ -101,24 +107,24 @@ def start_daemon(config):
 
 
 def last_updated(config, username):
-    db = StupidDatabase(config['base_path'] / 'database.yml')
+    db = StupidDatabase(config["base_path"] / "database.yml")
     data = db.read()
-    user_data = data.get('users', {}).get(username, {})
-    last_update = user_data.get('last_updated', '1990-01-01')
+    user_data = data.get("users", {}).get(username, {})
+    last_update = user_data.get("last_updated", "1990-01-01")
     if isinstance(last_update, str):
         last_update = datetime.fromisoformat(last_update)
     return last_update
 
 
 def update_last_updated(config, username):
-    db = StupidDatabase(config['base_path'] / 'database.yml')
+    db = StupidDatabase(config["base_path"] / "database.yml")
     data = db.read()
-    if 'users' not in data:
-        data['users'] = {}
-    if username not in data['users']:
-        data['users'][username] = {}
+    if "users" not in data:
+        data["users"] = {}
+    if username not in data["users"]:
+        data["users"][username] = {}
 
-    data['users'][username]['last_updated'] = datetime.now()
+    data["users"][username]["last_updated"] = datetime.now()
     db.write(data)
 
 
@@ -133,7 +139,9 @@ def does_require_update(last_update, news_feed_hour):
     return True
 
 
-if __name__ == '__main__':
-    logging.basicConfig(level=logging.DEBUG,
-                        format="%(asctime)s %(levelname)s :: %(name)s :: %(message)s")
+if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format="%(asctime)s %(levelname)s :: %(name)s :: %(message)s",
+    )
     main()

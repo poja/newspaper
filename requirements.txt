@@ -1,0 +1,10 @@
+PyYAML
+Markdown
+openai
+crossrefapi
+beautifulsoup4
+feedparser
+requests
+yagmail
+Jinja2
+numpy
